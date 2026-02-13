@@ -1,0 +1,38 @@
+
+[functions.cron-finalizar-reservas]
+enabled = true
+verify_jwt = true
+import_map = "./functions/cron-finalizar-reservas/deno.json"
+#schedule = "0 * * * *" Cada hora
+
+# Uncomment to specify a custom file path to the entrypoint.
+# Supported file extensions are: .ts, .js, .mjs, .jsx, .tsx
+entrypoint = "./functions/cron-finalizar-reservas/index.ts"
+# Specifies static files to be bundled with the function. Supports glob patterns.
+# For example, if you want to serve static HTML pages in your function:
+# static_files = [ "./functions/cron-finalizar-reservas/*.html" ]
+
+
+[functions.cron-controlador-infracciones]
+enabled = true
+verify_jwt = true
+import_map = "./functions/cron-controlador-infracciones/deno.json"
+#schedule = "0 * * * *" Cada hora
+
+# Uncomment to specify a custom file path to the entrypoint.
+# Supported file extensions are: .ts, .js, .mjs, .jsx, .tsx
+entrypoint = "./functions/cron-controlador-infracciones/index.ts"
+# Specifies static files to be bundled with the function. Supports glob patterns.
+# For example, if you want to serve static HTML pages in your function:
+# static_files = [ "./functions/cron-controlador-infracciones/*.html" ]
+
+[functions.cron-notificaciones-pago-deuda]
+enabled = true
+verify_jwt = true
+import_map = "./functions/cron-notificaciones-pago-deuda/deno.json"
+# Uncomment to specify a custom file path to the entrypoint.
+# Supported file extensions are: .ts, .js, .mjs, .jsx, .tsx
+entrypoint = "./functions/cron-notificaciones-pago-deuda/index.ts"
+# Specifies static files to be bundled with the function. Supports glob patterns.
+# For example, if you want to serve static HTML pages in your function:
+# static_files = [ "./functions/cron-notificaciones-pago-deuda/*.html" ]
