@@ -51,19 +51,34 @@ Deno.serve(async (req) => {
 
   // 2. Cron para generar infracciones de Deudas
   // Buscamos reservas Pendientes de Pago (4) vencidas (pasaron 25hs de la fecha reservada)
-  const cincoHorasAtras = new Date(new Date().getTime() - 25 * 60 * 60 * 1000).toISOString()
+  const veinticincoHorasAtras = new Date(new Date().getTime() - 25 * 60 * 60 * 1000).toISOString()
   
   const { data: reservasVencidas, error: errorReservas } = await supabase
       .from('reservas')
       .select('*')
       .eq('id_estado', 4) 
-      .lte('fecha_y_hora_reservada', cincoHorasAtras)
+      .lte('fecha_y_hora_reservada', veinticincoHorasAtras)
 
   if (errorReservas) {
       console.error('Error al obtener reservas vencidas:', errorReservas)
   } else if (reservasVencidas && reservasVencidas.length > 0) {
       
       for (const reserva of reservasVencidas) {
+        //Compruebo si el cliente ya tiene la infraccion por deuda activa
+        const { data: infraccionExistente, error: errorInfraccionActiva } = await supabase
+          .from('infracciones')
+          .select('*')
+          .eq('id_usuario', reserva.id_usuario)
+          .eq('activa', true)
+          .eq('id_tipo_infraccion', TIPO_INFRACCION.DEUDA)
+          .maybeSingle()
+
+        if (errorInfraccionActiva || infraccionExistente) {
+            console.error(`El cliente ${reserva.id_usuario} ya tiene la infracción por deuda activa o hubo error al obtenerla. Saltando.`)  
+            continue
+        }
+
+
         // Obtenemos el pago de la reserva vencida (lo que pagó de seña)
         const { data: pagoVencido, error: errorPago } = await supabase
           .from('pagos')
@@ -72,7 +87,7 @@ Deno.serve(async (req) => {
           .maybeSingle()
           
         if (errorPago || !pagoVencido) {
-            console.error(`Reserva ${reserva.id_reserva} en error o sin pago inicial. Saltando.`)
+            console.error(`Reserva ${reserva.id_reserva} en error en obtener pago inicial. Saltando.`)
             continue
         }
 
@@ -81,22 +96,30 @@ Deno.serve(async (req) => {
         
         // --- LOGICA DE COMPENSACIÓN ---
         // Buscamos reservas VIGENTES (1) del mismo usuario para usarlas de saldo
-        const { data: reservasVigentes } = await supabase
+        const { data: reservasVigentes, error: errorVigentes } = await supabase
             .from('reservas')
             .select('*')
             .eq('id_usuario', reserva.id_usuario)
             .eq('id_estado', 1) 
+
+        if (errorVigentes) {
+            console.error('Error al obtener reservas vigentes:', errorVigentes)
+        }
 
         let saldoFavor = 0
         let reservasCompensadas: any[] = []
 
         if (reservasVigentes && reservasVigentes.length > 0) {
             for (const resVigente of reservasVigentes) {
-                const { data: pagoVigente } = await supabase
+                const { data: pagoVigente, error: errorPagoVigente } = await supabase
                     .from('pagos')
                     .select('monto_pago, devuelto') 
                     .eq('id_reserva', resVigente.id_reserva)
                     .maybeSingle()
+
+                if (errorPagoVigente) {
+                    console.error(`Error al obtener pago de reserva ${resVigente.id_reserva}:`, errorPagoVigente)
+                }
 
                 if (pagoVigente) { 
                     // Si el pago no fue devuelto, lo usamos como saldo a favor
@@ -108,10 +131,14 @@ Deno.serve(async (req) => {
 
                 // CANCELAR la reserva vigente usada o no (por política, si eres infractor se caen las vigentes)
                 // Pero aquí específicamente las cancelamos para cobrarnos.
-                await supabase
+                const { error: errorCancelacion } = await supabase
                     .from('reservas')
                     .update({ id_estado: 5, cancelo_cliente: false })
                     .eq('id_reserva', resVigente.id_reserva)
+                
+                if (errorCancelacion) {
+                    console.error(`Error al cancelar reserva vigente ${resVigente.id_reserva}:`, errorCancelacion)
+                }
             }
         }
 
@@ -133,7 +160,22 @@ Deno.serve(async (req) => {
             // Deuda Saldada
             infraccionActiva = false
             monto_infraccion_final = 0
+            
+            // Actualizar reserva original a Finalizada (3) porque la deuda fue cubierta
+            const { error: errorUpdateReserva } = await supabase
+                .from('reservas')
+                .update({ id_estado: 3 })
+                .eq('id_reserva', reserva.id_reserva)
+
+            if (errorUpdateReserva) {
+                console.error(`Error al finalizar reserva saldada ${reserva.id_reserva}:`, errorUpdateReserva)
+            } else {
+                console.log(`Reserva ${reserva.id_reserva} marcada como Finalizada (Deuda saldada por compensación)`)
+            }
+
             remanente = Math.abs(balance)
+
+            //
             
             if (remanente > 0) {
                 asuntoEmail = `Deuda Saldada con Devolución #${reserva.id_reserva} - GSD`
@@ -147,7 +189,6 @@ Deno.serve(async (req) => {
         }
 
         // Insertar Infracción
-        const fecha_final = new Date(Date.now() + DIAS_INHABILITACION_MS).toISOString()
 
         const { error: errorInsert } = await supabase
               .from('infracciones')
@@ -156,7 +197,7 @@ Deno.serve(async (req) => {
                   id_tipo_infraccion: TIPO_INFRACCION.DEUDA,
                   monto_inicial: infraccionActiva ? monto_infraccion_final : 0, 
                   activa: infraccionActiva,
-                  fecha_final: fecha_final
+                  // fecha_final: default null
               })
 
           if (errorInsert) {
