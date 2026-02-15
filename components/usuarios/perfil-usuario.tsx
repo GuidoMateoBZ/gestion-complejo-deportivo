@@ -100,7 +100,7 @@ export function PerfilUsuario({ usuario, infraccionDeuda, infraccionCancelacion,
                     if (onClose) onClose()
                     router.refresh()
                 } else {
-                    router.refresh()
+                    router.push('/login')
                 }
             }
         } catch (error) {

@@ -33,7 +33,7 @@ interface ObtenerUsuariosParams {
 export async function obtenerUsuarios({ search, dni, estado, id, email }: ObtenerUsuariosParams = {}): Promise<Usuario[]> {
     const supabase = await createClient()
 
-    let query = supabase.from('usuarios').select('*')
+    let query = supabase.from('usuarios').select('*').eq('activo', true)
 
     if (id) {
         query = query.eq('id_usuario', id)

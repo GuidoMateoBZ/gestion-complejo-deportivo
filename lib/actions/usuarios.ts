@@ -102,7 +102,7 @@ export async function eliminarUsuario(id_usuario: string, confirmarForzoso: bool
     // 4. Soft delete
     const { error } = await supabaseAdmin
         .from('usuarios')
-        .update({ activo: false, habilitado: false }) 
+        .update({ activo: false}) 
         .eq('id_usuario', id_usuario)
 
     if (error) {
