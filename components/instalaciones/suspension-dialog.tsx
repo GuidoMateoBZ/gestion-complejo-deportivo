@@ -113,6 +113,7 @@ export function SuspensionDialog({ instalacion, open, onOpenChange, onSuccess }:
                                         onSelect={setDate}
                                         numberOfMonths={1}
                                         locale={es}
+                                        disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
                                         initialFocus
                                     />
                                 </div>

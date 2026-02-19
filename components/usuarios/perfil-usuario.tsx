@@ -29,9 +29,10 @@ interface PerfilUsuarioProps {
     montoDeudaCalculado?: number;
     isAdminView?: boolean;
     onClose?: () => void;
+    onUserUpdated?: (data: { nombre: string, email: string }) => void;
 }
 
-export function PerfilUsuario({ usuario, infraccionDeuda, infraccionCancelacion, montoDeudaCalculado, isAdminView = false, onClose }: PerfilUsuarioProps) {
+export function PerfilUsuario({ usuario, infraccionDeuda, infraccionCancelacion, montoDeudaCalculado, isAdminView = false, onClose, onUserUpdated }: PerfilUsuarioProps) {
     const router = useRouter()
     const [isEditing, setIsEditing] = useState(false)
     const [isLoading, setIsLoading] = useState(false)
@@ -64,6 +65,7 @@ export function PerfilUsuario({ usuario, infraccionDeuda, infraccionCancelacion,
             } else {
                 toast.success('Perfil actualizado correctamente', { id: toastId })
                 setIsEditing(false)
+                if (onUserUpdated) onUserUpdated(formData)
                 router.refresh()
             }
         } catch (error) {

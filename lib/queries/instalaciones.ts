@@ -49,6 +49,7 @@ export async function getSuspensionesInstalacion(idInstalacion: string) {
         .from('suspensiones')
         .select('*')
         .eq('id_instalacion', idInstalacion)
+        .eq('activa', true)
 
     if (error) {
         console.error('Error fetching suspensiones:', error)

@@ -84,9 +84,13 @@ export function ReservasTable({ reservas, isAdmin = false }: ReservasTableProps)
                         <TableBody>
                             {reservas.map((reserva) => {
                                 const fecha = new Date(reserva.fecha_y_hora_reservada)
+                                const ahora = new Date()
+                                const unaHoraAntes = new Date(fecha.getTime() - 60 * 60 * 1000)
+                                const puedeConfirmar = ahora >= unaHoraAntes
+
                                 // Ajustamos visualización
                                 const fechaStr = fecha.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit' })
-                                const horaStr = fecha.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })
+                                const horaStr = fecha.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', hour12: false })
 
                                 const estadoColor = ESTADO_COLORS[reserva.id_estado] || 'bg-gray-100'
 
@@ -138,7 +142,7 @@ export function ReservasTable({ reservas, isAdmin = false }: ReservasTableProps)
                                                 </Button>
 
                                                 {/* Si es Admin, mostrar Confirmar Asistencia para Vigente (1) */}
-                                                {isAdmin && reserva.id_estado === 1 && (
+                                                {isAdmin && reserva.id_estado === 1 && puedeConfirmar && (
                                                     <Button
                                                         variant="default"
                                                         size="sm"

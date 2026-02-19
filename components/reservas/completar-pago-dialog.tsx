@@ -45,22 +45,26 @@ export function CompletarPagoDialog({
         try {
             const res = await completarPagoReserva(idReserva)
             if (res.error) {
+                const message = typeof res.error === 'string' ? res.error : 'Ocurrió un error al procesar el pago.'
+                toast.error(message)
                 setResult({
                     success: false,
-                    message: typeof res.error === 'string' ? res.error : 'Ocurrió un error al procesar el pago.'
+                    message
                 })
             } else {
+                const message = res.mensajePago || 'Pago completado con éxito.'
                 setResult({
                     success: true,
-                    message: res.mensajePago || 'Pago completado con éxito.'
+                    message
                 })
-                onSuccess()
             }
         } catch (error) {
             console.error(error)
+            const message = 'Ocurrió un error inesperado al conectar con el servidor.'
+            toast.error(message)
             setResult({
                 success: false,
-                message: 'Ocurrió un error inesperado al conectar con el servidor.'
+                message
             })
         } finally {
             setLoading(false)
@@ -69,6 +73,7 @@ export function CompletarPagoDialog({
 
     function handleClose() {
         if (result?.success) {
+            onSuccess()
             router.refresh()
         }
         setResult(null)

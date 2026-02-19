@@ -24,6 +24,8 @@ export function ReservaDetalleDialog({ idReserva, open, onOpenChange, onSuccess,
     const [reserva, setReserva] = useState<any>(null)
     const [actionLoading, setActionLoading] = useState(false)
 
+    const puedeConfirmar = reserva ? new Date() >= new Date(new Date(reserva.fecha_y_hora_reservada).getTime() - 3600000) : false
+
     useEffect(() => {
         if (open && idReserva) {
             loadReserva()
@@ -198,7 +200,7 @@ export function ReservaDetalleDialog({ idReserva, open, onOpenChange, onSuccess,
                             )}
 
                             {/* Confirmar Asistencia: Solo Admin y si estado es 1 (Vigente) */}
-                            {isAdmin && reserva.id_estado === 1 && (
+                            {isAdmin && reserva.id_estado === 1 && puedeConfirmar && (
                                 <Button
                                     onClick={handleConfirmarAsistencia}
                                     disabled={actionLoading}

@@ -116,6 +116,7 @@ export async function crearReserva(data: CrearReservaData) {
         .from('suspensiones')
         .select('id_suspension')
         .eq('id_instalacion', data.id_instalacion)
+        .eq('activa', true)
         .lte('fecha_y_hora_inicio', fechaInicioISO)
         .gte('fecha_y_hora_fin', fechaInicioISO)
         .maybeSingle()
@@ -363,7 +364,8 @@ export async function cancelarReservaInstalacion(idInstalacion: string, fechaHor
         .from('reservas')
         .update({ id_estado: 5 })
         .eq('id_instalacion', idInstalacion)
-        .neq('id_estado', 5)
+        .eq('id_estado', 1) // Solo cancelar reservas vigentes
+        //¿Cancelar en curso?
 
     if (fechaHoraInicio) query = query.gte('fecha_y_hora_reservada', fechaHoraInicio)
     if (fechaHoraFin) query = query.lte('fecha_y_hora_reservada', fechaHoraFin)
@@ -435,7 +437,7 @@ export async function completarPagoReserva(id_reserva: number) {
         return { error: 'La reserva no está pendiente de pago' }
     }
     const infraccion = await getInfraccionDeuda(reserva.id_usuario)
-    if (infraccion) {
+    if (infraccion.data && infraccion.data.length > 0) {
         const monto = await calcularMontoDeuda(reserva.id_usuario)
         if (monto) {
             montoAPagar = monto.monto_total

@@ -48,6 +48,7 @@ export async function getDatosReportes(filtros: FiltrosReporte) {
         `)
         .gte('fecha_y_hora_pago', inicioStr)
         .lte('fecha_y_hora_pago', finStr)
+        .eq('devuelto', false)
 
     const { data: pagos, error: errorPagos } = await queryIngresos
 

@@ -1,6 +1,6 @@
 'use server'
 
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createClientAdmin } from '@/lib/supabase/server'
 import { getPagoReserva } from '@/lib/queries/pagos'
 
 export async function crearPago(id_reserva: number, monto_pago: number, esCliente: boolean = true) {
@@ -29,21 +29,19 @@ export async function crearPago(id_reserva: number, monto_pago: number, esClient
 
 
 export async function devolverPago(id_reserva: number, tarifa_total: number) {
-    const supabase = await createClient()
+    const supabase = await createClientAdmin()
 
-    const { data: pago, error: errorPago } = await getPagoReserva(id_reserva)
+    const { data: pagos, error: errorPago } = await getPagoReserva(id_reserva)
     if (errorPago) {
         console.error('Error al obtener pagos:', errorPago)
         return { error: 'Error al obtener los pagos' }
     }
-    if (!pago) {
+    if (!pagos || pagos.length === 0) {
         return { error: 'No se encontraron pagos' }
     }
-    const monto_a_devolver = tarifa_total - pago.monto_pago
-    if (monto_a_devolver <= 0) {
-        return { error: 'No se puede devolver pago porque el monto pagado es menor o igual al monto total' }
-    }
 
+    const monto_a_devolver = pagos.reduce((acc: number, curr: any) => acc + curr.monto_pago, 0)
+    
     //Acá debería llamar a la API de Mercado Pago para hacer el reembolso real.
     const monto_devuelto = monto_a_devolver
     const { error } = await supabase
@@ -61,15 +59,17 @@ export async function devolverPago(id_reserva: number, tarifa_total: number) {
 
 
 export async function calcularMontoPagoNormal(id_reserva: number, tarifa_total: number) {
-    const { data: pago, error: errorPago } = await getPagoReserva(id_reserva)
+    const { data: pagos, error: errorPago } = await getPagoReserva(id_reserva)
     if (errorPago) {
         console.error('Error al obtener pagos:', errorPago)
         return { error: 'Error al obtener los pagos' }
     }
-    if (!pago) {
-        return { error: 'No se encontraron pagos' }
+    if (!pagos || pagos.length === 0) {
+       // Si no hay pagos, el monto a pagar es el total
+       return { success: true, monto_a_pagar: tarifa_total }
     }
-    const monto_a_pagar = tarifa_total - pago.monto_pago
+    const total_pagado = pagos.reduce((acc: number, curr: any) => acc + curr.monto_pago, 0)
+    const monto_a_pagar = tarifa_total - total_pagado
     if (monto_a_pagar <= 0) {
         return { error: 'No se puede completar el pago porque el monto pagado es mayor o igual al monto total' }
     }
@@ -79,15 +79,17 @@ export async function calcularMontoPagoNormal(id_reserva: number, tarifa_total: 
 export async function sumarAlPago(id_reserva: number, monto_a_sumar: number) {
     const supabase = await createClient()
 
-    const { data: pago, error: errorPago } = await getPagoReserva(id_reserva)
-    if (errorPago) {
-        console.error('Error al obtener pagos:', errorPago)
-        return { error: 'Error al obtener los pagos' }
+    // Nota: sumarAlPago modifica un pago existente. Si hay múltiples, ¿cuál modifica?
+    // Asumimos que modifica el último o requiere lógica nueva.
+    // Por simplicidad y consistencia, createPago es preferible para agregar fondos.
+    // Pero si se usa esta función:
+    const { data: pagos, error: errorPago } = await getPagoReserva(id_reserva)
+    if (errorPago || !pagos || pagos.length === 0) {
+         return { error: 'No se encontraron pagos para actualizar' }
     }
-    if (!pago) {
-        return { error: 'No se encontraron pagos' }
-    }
-    const monto_total = pago.monto_pago + monto_a_sumar
+    // Modificamos el último pago
+    const ultimoPago = pagos[pagos.length - 1]
+    const monto_total = ultimoPago.monto_pago + monto_a_sumar
     const { error } = await supabase
         .from('pagos')
         .update({ monto_pago: monto_total })

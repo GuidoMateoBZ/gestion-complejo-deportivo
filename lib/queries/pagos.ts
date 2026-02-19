@@ -6,7 +6,7 @@ export async function getPagoReserva (id_reserva: number){
         .from('pagos')
         .select('*')
         .eq('id_reserva', id_reserva)
-        .maybeSingle()
+        
     if (error) {
         console.error('Error al obtener pagos:', error)
         return { error: 'Error al obtener los pagos' }

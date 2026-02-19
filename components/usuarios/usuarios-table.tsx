@@ -174,6 +174,8 @@ export function UsuariosTable({ usuarios, searchParams }: UsuariosTableProps) {
                                 infraccionCancelacion={userDetails?.infraccionCancelacion}
                                 montoDeudaCalculado={userDetails?.montoDeudaCalculado ?? undefined}
                                 isAdminView={true}
+                                onClose={() => setIsDialogOpen(false)}
+                                onUserUpdated={(data) => setSelectedUser((prev: any) => ({ ...prev, nombre_usuario: data.nombre, email_usuario: data.email }))}
                             />
                         )
                     )}

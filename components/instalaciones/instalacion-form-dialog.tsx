@@ -261,7 +261,7 @@ export function InstalacionFormDialog({ deportes, instalacion }: Props) {
                                 id="tarifa"
                                 type="number"
                                 min="0"
-                                step="1000"
+                                step="100"
                                 placeholder="Ej: 50000"
                                 value={formData.tarifa_hora || ''}
                                 onChange={(e) => setFormData({ ...formData, tarifa_hora: Number(e.target.value) })}
