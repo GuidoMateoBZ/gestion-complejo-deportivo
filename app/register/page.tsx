@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { register } from './actions'
 import { Input } from '@/components/ui/input'
@@ -10,6 +10,37 @@ import { ThemeToggle } from '@/components/theme-toggle'
 export default function RegisterPage() {
     const [error, setError] = useState<string | null>(null)
     const [isLoading, setIsLoading] = useState(false)
+    const [formDataLocal, setFormDataLocal] = useState({
+        nombre: '',
+        dni: '',
+        email: ''
+    })
+
+    // Cargar datos guardados al montar
+    useEffect(() => {
+        const savedData = sessionStorage.getItem('register_form_data')
+        if (savedData) {
+            try {
+                setFormDataLocal(JSON.parse(savedData))
+            } catch (e) {
+                console.error('Error parsing saved form data', e)
+            }
+        }
+    }, [])
+
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const { name, value } = e.target
+        let newValue = value
+
+        // Para DNI, limitar estrictamente a 8 caracteres (maxLength no funciona en type="number")
+        if (name === 'dni') {
+            newValue = newValue.slice(0, 8)
+        }
+
+        const newData = { ...formDataLocal, [name]: newValue }
+        setFormDataLocal(newData)
+        sessionStorage.setItem('register_form_data', JSON.stringify(newData))
+    }
 
     const handleSubmit = async (formData: FormData) => {
         setIsLoading(true)
@@ -20,6 +51,9 @@ export default function RegisterPage() {
         if (result?.error) {
             setError(result.error)
             setIsLoading(false)
+        } else {
+            // Limpiar datos al tener éxito (aunque redirecciona, es buena práctica)
+            sessionStorage.removeItem('register_form_data')
         }
     }
 
@@ -51,19 +85,33 @@ export default function RegisterPage() {
                             placeholder="Tu nombre completo"
                             required
                             disabled={isLoading}
+                            value={formDataLocal.nombre}
+                            onChange={handleChange}
                         />
 
                         <Input
                             label="DNI"
                             id="dni"
                             name="dni"
-                            type="text"
+                            type="number"
                             placeholder="12345678"
                             required
                             disabled={isLoading}
-                            maxLength={8}
+                            // Ocultar flechas numéricas (spinners)
+                            className="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                            onKeyDown={(e) => {
+                                // Prevenir caracteres no válidos en un DNI (decimales, exponentes, signos)
+                                if (["e", "E", "+", "-", ".", ","].includes(e.key)) {
+                                    e.preventDefault()
+                                }
+                            }}
+                            maxLength={8} // Solo semántico para accesibilidad/lectores, ya que type="number" lo ignora
+                            min={10000000} // Mínimo razonable (1 millón) para evitar errores simples
+                            max={99999999} // Máximo de 8 dígitos
                             pattern="\d{8}"
                             title="El DNI debe tener exactamente 8 dígitos"
+                            value={formDataLocal.dni}
+                            onChange={handleChange}
                         />
 
                         <Input
@@ -74,6 +122,8 @@ export default function RegisterPage() {
                             placeholder="tu@email.com"
                             required
                             disabled={isLoading}
+                            value={formDataLocal.email}
+                            onChange={handleChange}
                         />
 
                         <Input

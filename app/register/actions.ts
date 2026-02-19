@@ -10,16 +10,17 @@ export async function register(formData: FormData) {
     const password = formData.get('password') as string
     const confirmPassword = formData.get('confirmPassword') as string
     const nombre = formData.get('nombre') as string
-    const dni = formData.get('dni') as string
+    const dniInput = formData.get('dni') as string
+    const dni = parseInt(dniInput, 10)
 
     // Validar que las contraseñas coincidan
     if (password !== confirmPassword) {
         return { error: 'Las contraseñas no coinciden' }
     }
 
-    // Validar DNI de 8 dígitos
-    if (!/^\d{8}$/.test(dni)) {
-        return { error: 'El DNI debe tener exactamente 8 dígitos' }
+    // Validar DNI válido y longitud correcta (7 a 8 dígitos)
+    if (isNaN(dni) || dniInput.length < 7 || dniInput.length > 8) {
+        return { error: 'El DNI debe tener entre 7 y 8 dígitos numéricos válidos.' }
     }
 
     // Validar longitud de contraseña
@@ -27,15 +28,26 @@ export async function register(formData: FormData) {
         return { error: 'La contraseña debe tener al menos 6 caracteres' }
     }
 
-    // Verificar si el DNI ya existe antes de intentar crear el usuario
-    const { data: usuarioExistente } = await supabase
+    // Verificar DNI explícitamente
+    const { data: usuarioPorDni } = await supabase
         .from('usuarios')
-        .select('id_usuario')
+        .select('dni')
         .eq('dni', dni)
         .maybeSingle()
-
-    if (usuarioExistente) {
+    
+    if (usuarioPorDni) {
         return { error: 'El DNI ingresado ya pertenece a un usuario registrado.' }
+    }
+
+    // Verificar Email explícitamente
+    const { data: usuarioPorEmail } = await supabase
+        .from('usuarios')
+        .select('email')
+        .eq('email', email.trim())
+        .maybeSingle()
+
+    if (usuarioPorEmail) {
+        return { error: 'Este correo electrónico ya está registrado en el sistema.' }
     }
 
     const { error } = await supabase.auth.signUp({
@@ -44,7 +56,7 @@ export async function register(formData: FormData) {
         options: {
             data: {
                 nombre,
-                dni,
+                dni, // Ya es un número entero
             },
         },
     })
@@ -52,10 +64,12 @@ export async function register(formData: FormData) {
     if (error) {
         console.error('Error en registro:', error)
         
-        if (error.message.includes('User already registered') || error.message.includes('Database error')) {
-             if (error.message.includes('User already registered')) return { error: 'Este correo electrónico ya está registrado.' }
-             // Si sigue dando error de BD genérico, asumimos que puede ser algo grave, pero el DNI ya lo chequeamos
-             return { error: 'Ocurrió un error al registrarse. (' + error.message + ')' }
+        if (error.message.includes('User already registered')) {
+             return { error: 'Este correo electrónico ya está registrado.' }
+        }
+        
+        if (error.message.includes('Database error')) {
+             return { error: 'Error al registrar: El DNI o Email podría estar duplicado en el sistema.' }
         }
         
         return { error: error.message }
