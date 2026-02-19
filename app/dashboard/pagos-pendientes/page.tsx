@@ -31,8 +31,8 @@ export default async function PagosPendientesPage() {
             const pagosRes = await getPagoReserva(reserva.id_reserva)
 
             let totalPagado = 0
-            if (pagosRes.success && pagosRes.data) {
-                totalPagado = pagosRes.data.monto_pago
+            if (pagosRes.success && pagosRes.data && Array.isArray(pagosRes.data)) {
+                totalPagado = pagosRes.data.reduce((acc: number, curr: any) => acc + curr.monto_pago, 0)
             }
 
             const saldoNormal = reserva.tarifa_total - totalPagado
