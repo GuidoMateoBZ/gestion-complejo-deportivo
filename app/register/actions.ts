@@ -27,6 +27,17 @@ export async function register(formData: FormData) {
         return { error: 'La contraseña debe tener al menos 6 caracteres' }
     }
 
+    // Verificar si el DNI ya existe antes de intentar crear el usuario
+    const { data: usuarioExistente } = await supabase
+        .from('usuarios')
+        .select('id_usuario')
+        .eq('dni', dni)
+        .maybeSingle()
+
+    if (usuarioExistente) {
+        return { error: 'El DNI ingresado ya pertenece a un usuario registrado.' }
+    }
+
     const { error } = await supabase.auth.signUp({
         email,
         password,
@@ -39,6 +50,14 @@ export async function register(formData: FormData) {
     })
 
     if (error) {
+        console.error('Error en registro:', error)
+        
+        if (error.message.includes('User already registered') || error.message.includes('Database error')) {
+             if (error.message.includes('User already registered')) return { error: 'Este correo electrónico ya está registrado.' }
+             // Si sigue dando error de BD genérico, asumimos que puede ser algo grave, pero el DNI ya lo chequeamos
+             return { error: 'Ocurrió un error al registrarse. (' + error.message + ')' }
+        }
+        
         return { error: error.message }
     }
 
